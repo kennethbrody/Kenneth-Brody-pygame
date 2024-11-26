@@ -18,7 +18,7 @@ BLUE = (0, 0, 255)
 BLACK = (0, 0, 0)
 YELLOW = (255, 255, 0)
 RED = (255, 0, 0)
-PELT_COLOR = (255, 255, 255)  # Color of the pellet (white)
+PELT_COLOR = (0, 0, 0)  # Color of the pellet changed to black
 
 # Player settings
 player_size = 40
@@ -151,7 +151,7 @@ def check_ghost_collision():
 
 # Function to check if Pac-Man collects a pellet
 def check_pellet_collision(pellets):
-    global player_x, player_y
+    global player_x, player_y, score
     player_rect = pygame.Rect(player_x, player_y, player_size, player_size)
     collected_pellets = []
 
@@ -164,8 +164,9 @@ def check_pellet_collision(pellets):
     for pellet in collected_pellets:
         pellet[2] = True  # Mark the pellet as collected (change its color to black)
         pellets.remove(pellet)  # Remove the pellet from the list
+        score += 1  # Increment the score by 1 for each collected pellet
 
-# Generate the initial list of pellets
+# Generate the initial list of pellets (placed throughout the entire maze)
 def generate_pellets():
     pellets = []
     for y in range(maze_height):
@@ -176,92 +177,148 @@ def generate_pellets():
                     pellets.append([x * TILE_SIZE + TILE_SIZE // 4, y * TILE_SIZE + TILE_SIZE // 4, False])  # Add collected status
     return pellets
 
-# Initialize the list of pellets
+# Initialize the list of pellets and the score
 pellets = generate_pellets()
+score = 0
 
 # Frame rate
 FPS = 60
 clock = pygame.time.Clock()
 
-# Main game loop
-running = True
-frame_count = 0  # Keep track of frame count for ghost movement
+# Font for displaying the score and instructions
+font = pygame.font.SysFont("Arial", 24)
 
-while running:
-    # Event handling
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            pygame.quit()
-            sys.exit()
+# Function to display the intro screen
+def display_intro_screen():
+    screen.fill(BLACK)
+    title_font = pygame.font.SysFont("Arial", 48)
+    instructions_font = pygame.font.SysFont("Arial", 32)
+    
+    # Title
+    title_text = title_font.render("Pac-Man-like Game", True, WHITE)
+    screen.blit(title_text, (SCREEN_WIDTH // 2 - title_text.get_width() // 2, SCREEN_HEIGHT // 4))
 
-    # Key press handling
-    keys = pygame.key.get_pressed()
+    # Instructions
+    instructions = [
+        "Use the arrow keys to move",
+        "Collect pellets",
+        "Avoid ghosts!"
+    ]
 
-    # Calculate next position based on key press (movement)
-    next_x = player_x
-    next_y = player_y
+    for i, text in enumerate(instructions):
+        instruction_text = instructions_font.render(text, True, WHITE)
+        screen.blit(instruction_text, (SCREEN_WIDTH // 2 - instruction_text.get_width() // 2, SCREEN_HEIGHT // 2 + i * 40))
 
-    if keys[pygame.K_LEFT]:
-        next_x -= player_speed
-    if keys[pygame.K_RIGHT]:
-        next_x += player_speed
-    if keys[pygame.K_UP]:
-        next_y -= player_speed
-    if keys[pygame.K_DOWN]:
-        next_y += player_speed
+    # Continue prompt
+    continue_text = instructions_font.render("Press Space to Continue", True, WHITE)
+    screen.blit(continue_text, (SCREEN_WIDTH // 2 - continue_text.get_width() // 2, SCREEN_HEIGHT - 100))
 
-    # Wrap around the screen borders (if player goes off one side)
-    if next_x < 0:
-        next_x = SCREEN_WIDTH - player_size
-    elif next_x > SCREEN_WIDTH:
-        next_x = 0
-
-    if next_y < 0:
-        next_y = SCREEN_HEIGHT - player_size
-    elif next_y > SCREEN_HEIGHT:
-        next_y = 0
-
-    # Check for wall collisions (don't let the player move through walls)
-    player_tile_x = next_x // TILE_SIZE
-    player_tile_y = next_y // TILE_SIZE
-
-    if maze[player_tile_y][player_tile_x] == 0:  # If next tile is a path (0)
-        player_x = next_x
-        player_y = next_y
-
-    # Fill the screen with the background image
-    screen.fill(BLACK)  # Set a black background
-
-    # Draw the maze
-    draw_maze()
-
-    # Move the ghosts (chasing the player)
-    move_ghosts(frame_count)
-
-    # Draw the ghosts (red squares for simplicity)
-    for ghost in ghosts:
-        pygame.draw.rect(screen, RED, (ghost['x'], ghost['y'], ghost_size, ghost_size))
-
-    # Draw the player (yellow circle)
-    pygame.draw.circle(screen, player_color, (player_x + player_size // 2, player_y + player_size // 2), player_size // 2)
-
-    # Draw the remaining pellets
-    for pellet in pellets:
-        pygame.draw.circle(screen, PELT_COLOR, (pellet[0], pellet[1]), TILE_SIZE // 6)  # Draw white pellet
-
-    # Check if player collects any pellets
-    check_pellet_collision(pellets)
-
-    # Check for collision with ghosts
-    if check_ghost_collision():
-        print("Game Over!")
-        running = False
-
-    # Update the display
     pygame.display.flip()
 
-    # Control the frame rate
-    clock.tick(FPS)
+# Main game loop
+def main_game_loop():
+    global player_x, player_y, score, pellets
+    frame_count = 0  # Keep track of frame count for ghost movement
+    
+    running = True
+    while running:
+        # Event handling
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
 
-    # Increment frame count for ghost movement timing
-    frame_count += 1
+        # Key press handling
+        keys = pygame.key.get_pressed()
+
+        # Calculate next position based on key press (movement)
+        next_x = player_x
+        next_y = player_y
+
+        if keys[pygame.K_LEFT]:
+            next_x -= player_speed
+        if keys[pygame.K_RIGHT]:
+            next_x += player_speed
+        if keys[pygame.K_UP]:
+            next_y -= player_speed
+        if keys[pygame.K_DOWN]:
+            next_y += player_speed
+
+        # Wrap around the screen borders (if player goes off one side)
+        if next_x < 0:
+            next_x = SCREEN_WIDTH - player_size
+        elif next_x > SCREEN_WIDTH:
+            next_x = 0
+
+        if next_y < 0:
+            next_y = SCREEN_HEIGHT - player_size
+        elif next_y > SCREEN_HEIGHT:
+            next_y = 0
+
+        # Check for wall collisions (don't let the player move through walls)
+        player_tile_x = next_x // TILE_SIZE
+        player_tile_y = next_y // TILE_SIZE
+
+        if maze[player_tile_y][player_tile_x] == 0:  # If next tile is a path (0)
+            player_x = next_x
+            player_y = next_y
+
+        # Fill the screen with the background image
+        screen.fill(BLACK)  # Set a black background
+
+        # Draw the maze
+        draw_maze()
+
+        # Move the ghosts (chasing the player)
+        move_ghosts(frame_count)
+
+        # Draw the ghosts (red squares for simplicity)
+        for ghost in ghosts:
+            pygame.draw.rect(screen, RED, (ghost['x'], ghost['y'], ghost_size, ghost_size))
+
+        # Draw the player (yellow circle)
+        pygame.draw.circle(screen, player_color, (player_x + player_size // 2, player_y + player_size // 2), player_size // 2)
+
+        # Draw the remaining pellets
+        for pellet in pellets:
+            pygame.draw.circle(screen, PELT_COLOR, (pellet[0], pellet[1]), TILE_SIZE // 6)  # Draw black pellet
+
+        # Check if player collects any pellets
+        check_pellet_collision(pellets)
+
+        # Check for collision with ghosts
+        if check_ghost_collision():
+            print("Game Over!")
+            running = False
+
+        # Draw the score in the top-left corner (color changed to black)
+        score_text = font.render(f"Score: {score}", True, BLACK)  # Changed to BLACK
+        screen.blit(score_text, (10, 10))
+
+        # Update the display
+        pygame.display.flip()
+
+        # Control the frame rate
+        clock.tick(FPS)
+
+        # Increment frame count for ghost movement timing
+        frame_count += 1
+
+# Intro screen loop
+def intro_screen():
+    intro_running = True
+    while intro_running:
+        display_intro_screen()
+
+        # Check for key press
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_SPACE:  # Start the game when space is pressed
+                    intro_running = False
+                    main_game_loop()
+
+# Start the intro screen
+intro_screen()
